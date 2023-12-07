@@ -11,7 +11,7 @@ import java.util.Objects;
 @Setter
 @NoArgsConstructor
 public class StatHitDto {
-    private Integer id;
+    private Long id;
 
     @NotBlank(message = "'app' field must not be empty")
     private String app;

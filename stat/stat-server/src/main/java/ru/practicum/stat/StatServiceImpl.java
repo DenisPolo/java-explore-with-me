@@ -49,4 +49,10 @@ public class StatServiceImpl implements StatService {
                     statRepository.findStats(params.getStart(), params.getEnd());
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Boolean getIsUniqueIp(StatHitDto statHitDto) {
+        return statRepository.findByIp(statHitDto.getApp(), statHitDto.getUri(), statHitDto.getIp()).isEmpty();
+    }
 }

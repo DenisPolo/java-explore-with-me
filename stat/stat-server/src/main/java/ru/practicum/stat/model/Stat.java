@@ -19,7 +19,7 @@ public class Stat {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(name = "app", nullable = false)
     private String app;

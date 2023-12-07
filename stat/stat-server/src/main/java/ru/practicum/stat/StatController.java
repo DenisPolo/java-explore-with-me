@@ -9,6 +9,7 @@ import ru.practicum.stat.queryParams.QueryParams;
 import ru.practicum.statDto.StatHitDto;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,7 +23,7 @@ public class StatController {
     @PostMapping("/hit")
     public ResponseEntity<StatHitDto> postHit(@RequestBody StatHitDto statHitDto, HttpServletRequest request) {
         log.info("request: " + "(" + request.getMethod() + ")" + request.getRequestURL());
-        return ResponseEntity.ok().body(statService.postHit(statHitDto));
+        return ResponseEntity.created(URI.create(request.getRequestURI())).body(statService.postHit(statHitDto));
     }
 
     @GetMapping("/stats")
@@ -32,9 +33,23 @@ public class StatController {
             @RequestParam(required = false) List<String> uris,
             @RequestParam(defaultValue = "false", required = false) Boolean unique,
             HttpServletRequest request) {
-        log.info("request: " + "(" + request.getMethod() + ")" + request.getRequestURL() + "?"
-                + request.getQueryString());
+        String requestParams = request.getQueryString();
+        log.info("request: " + "(" + request.getMethod() + ")" + request.getRequestURL()
+                + (requestParams == null ? "" : "?" + requestParams));
         QueryParams params = new QueryParams(start, end, uris, unique);
         return ResponseEntity.ok().body(statService.getStat(params));
+    }
+
+    @GetMapping("/checkUniqueIp")
+    public ResponseEntity<Boolean> getIsUniqueIp(
+            @RequestParam(name = "app") String app,
+            @RequestParam(name = "uri") String uri,
+            @RequestParam(name = "ip") String ip,
+            HttpServletRequest request) {
+        String requestParams = request.getQueryString();
+        log.info("request: " + "(" + request.getMethod() + ")" + request.getRequestURL()
+                + (requestParams == null ? "" : "?" + requestParams));
+        StatHitDto statHitDto = new StatHitDto(app, uri, ip, null);
+        return ResponseEntity.ok().body(statService.getIsUniqueIp(statHitDto));
     }
 }
