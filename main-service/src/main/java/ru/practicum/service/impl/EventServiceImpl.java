@@ -38,7 +38,6 @@ import javax.persistence.criteria.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static ru.practicum.constant.Constants.CURRENT_TIME;
 
@@ -54,7 +53,6 @@ public class EventServiceImpl implements EventService {
     private final SessionFactory sessionFactory;
 
     @Override
-    @Transactional
     public EventFullDto createEvent(Long userId, NewEventDto newEventDto) {
         if (CURRENT_TIME.isAfter(LocalDateTime.parse(newEventDto.getEventDate(), Constants.DATE_TIME_FORMATTER))) {
             throw new BadRequestException("Event date can't be in the past");
@@ -138,16 +136,6 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(propagation = Propagation.REQUIRED, readOnly = true)
     public List<EventShortDto> getEvents(QueryPublicParams params, int from, int size) {
-        List<Event> events;
-        List<Long> foundEventsIds = new ArrayList<>();
-
-        if (params.getText() != null) {
-            events = eventRepository
-                    .findDistinctItemByAnnotationContainingIgnoreCaseOrDescriptionContainingIgnoreCase(params.getText(), params.getText());
-
-            foundEventsIds = events.stream().map(Event::getId).collect(Collectors.toList());
-        }
-
         Session session = sessionFactory.openSession().getSession();
         CriteriaBuilder cb = session.getCriteriaBuilder();
         CriteriaQuery<Event> cq = cb.createQuery(Event.class);
@@ -159,7 +147,10 @@ public class EventServiceImpl implements EventService {
         predicates.add(cb.and(event.get("state").in(EventState.PUBLISHED)));
 
         if (params.getText() != null) {
-            predicates.add(cb.and(event.get("id").in(foundEventsIds)));
+            predicates.add(cb.or((cb.like(cb.lower(event.get("annotation")),
+                            ("%" + params.getText() + "%").toLowerCase())),
+                    (cb.like(cb.lower(event.get("description")),
+                            ("%" + params.getText() + "%").toLowerCase()))));
         }
 
         if (params.getCategories() != null) {
@@ -232,7 +223,6 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    @Transactional
     public EventFullDto getEvent(Long eventId, boolean uniqueIp) {
         Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException("Event with id: "
                 + eventId + " doesn't exist"));
@@ -249,7 +239,6 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    @Transactional
     public EventFullDto updateEvent(Long userId, Long eventId, UpdateEventUserRequest updateEvent) {
         if (!userRepository.existsById(userId)) {
             throw new NotFoundException("User with id: " + userId + " doesn't exist");
@@ -286,7 +275,6 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    @Transactional
     public EventFullDto updateEvent(Long eventId, UpdateEventAdminRequest updateEvent) {
         Event updatableEvent = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new NotFoundException("Event with id: " + eventId + " doesn't exist");
@@ -326,7 +314,6 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    @Transactional
     public ResponseFormat deleteEvent(Long userId, Long eventId) {
         if (!userRepository.existsById(userId)) {
             throw new NotFoundException("User with id: " + userId + " doesn't exist");

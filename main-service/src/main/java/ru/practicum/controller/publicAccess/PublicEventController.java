@@ -1,7 +1,6 @@
 package ru.practicum.controller.publicAccess;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +9,7 @@ import ru.practicum.constant.Sort;
 import ru.practicum.controller.queryParams.QueryPublicParams;
 import ru.practicum.dto.event.EventFullDto;
 import ru.practicum.dto.event.EventShortDto;
+import ru.practicum.log.Log;
 import ru.practicum.service.EventService;
 import ru.practicum.statDto.StatHitDto;
 
@@ -21,7 +21,6 @@ import java.util.List;
 
 import static ru.practicum.constant.Constants.*;
 
-@Slf4j
 @RestController
 @RequestMapping(path = "/events")
 @RequiredArgsConstructor
@@ -41,9 +40,7 @@ public class PublicEventController {
             @RequestParam(defaultValue = "0", required = false) int from,
             @RequestParam(defaultValue = "10", required = false) int size,
             HttpServletRequest request) {
-        String requestParams = request.getQueryString();
-        log.info("public: " + "(" + request.getMethod() + ")" + request.getRequestURL()
-                + (requestParams == null ? "" : "?" + requestParams));
+        Log.setRequestLog("public:", request);
 
         QueryPublicParams params = new QueryPublicParams(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort);
 
@@ -59,7 +56,7 @@ public class PublicEventController {
     public ResponseEntity<EventFullDto> getEvent(
             @PathVariable Long id,
             HttpServletRequest request) throws MalformedURLException, URISyntaxException {
-        log.info("public: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("public:", request);
 
         StatHitDto statHitDto = new StatHitDto(APP, request.getRequestURI(), request.getRemoteAddr(),
                 CURRENT_TIME.format(DATE_TIME_FORMATTER));

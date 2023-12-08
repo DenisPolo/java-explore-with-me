@@ -1,7 +1,6 @@
 package ru.practicum.controller.adminAccess;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +8,7 @@ import ru.practicum.constant.EventState;
 import ru.practicum.controller.queryParams.QueryAdminParams;
 import ru.practicum.dto.event.EventFullDto;
 import ru.practicum.dto.event.UpdateEventAdminRequest;
+import ru.practicum.log.Log;
 import ru.practicum.service.EventService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -16,7 +16,6 @@ import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping(path = "/admin/events")
 @RequiredArgsConstructor
@@ -33,9 +32,7 @@ public class EventController {
             @RequestParam(defaultValue = "0", required = false) int from,
             @RequestParam(defaultValue = "10", required = false) int size,
             HttpServletRequest request) {
-        String requestParams = request.getQueryString();
-        log.info("admin: " + "(" + request.getMethod() + ")" + request.getRequestURL()
-                + (requestParams == null ? "" : "?" + requestParams));
+        Log.setRequestLog("admin:", request);
         QueryAdminParams params = new QueryAdminParams(users, states, categories, rangeStart, rangeEnd);
         return ResponseEntity.ok().body(service.getEvents(params, from, size));
     }
@@ -45,7 +42,7 @@ public class EventController {
             @PathVariable Long eventId,
             @Valid @RequestBody UpdateEventAdminRequest updateRequest,
             HttpServletRequest request) {
-        log.info("admin: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("admin:", request);
         return ResponseEntity.ok().body(service.updateEvent(eventId, updateRequest));
     }
 }

@@ -84,14 +84,14 @@ public class EWMStatClient {
                 "end", endTime
         ));
 
-        StatDto[] statDtos = rest.exchange(makePath("", uris, unique), HttpMethod.GET, null, StatDto[].class,
+        StatDto[] statDtos = rest.exchange(makePath(uris, unique), HttpMethod.GET, null, StatDto[].class,
                 parameters).getBody();
 
         return Arrays.asList(Objects.requireNonNull(statDtos));
     }
 
-    private String makePath(String path, List<String> uris, Boolean unique) {
-        StringBuilder requestPath = new StringBuilder(path);
+    private String makePath(List<String> uris, Boolean unique) {
+        StringBuilder requestPath = new StringBuilder();
 
         requestPath.append("/stats?start={start}&end={end}");
 

@@ -24,7 +24,6 @@ public class UserServiceImpl implements UserService {
     private final UserRepository repository;
 
     @Override
-    @Transactional
     public UserDto createUser(UserDto userDto) {
         User user = UserMapper.INSTANCE.mapToNewUser(userDto);
 
@@ -44,7 +43,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
     public ResponseFormat deleteUser(long userId) {
         if (repository.existsById(userId)) {
             repository.deleteById(userId);

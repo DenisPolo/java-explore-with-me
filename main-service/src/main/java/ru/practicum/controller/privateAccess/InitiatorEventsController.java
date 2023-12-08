@@ -1,7 +1,6 @@
 package ru.practicum.controller.privateAccess;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.event.EventFullDto;
@@ -11,6 +10,7 @@ import ru.practicum.dto.event.UpdateEventUserRequest;
 import ru.practicum.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.dto.request.EventRequestStatusUpdateResult;
 import ru.practicum.dto.request.ParticipationRequestDto;
+import ru.practicum.log.Log;
 import ru.practicum.responseFormat.ResponseFormat;
 import ru.practicum.service.EventService;
 import ru.practicum.service.RequestService;
@@ -20,7 +20,6 @@ import javax.validation.Valid;
 import java.net.URI;
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping(path = "/users/{userId}/events")
 @RequiredArgsConstructor
@@ -33,7 +32,7 @@ public class InitiatorEventsController {
             @PathVariable Long userId,
             @Valid @RequestBody NewEventDto newEventDto,
             HttpServletRequest request) {
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("user:", request);
         return ResponseEntity.created(URI.create(request.getRequestURI()))
                 .body(eventService.createEvent(userId, newEventDto));
     }
@@ -44,9 +43,7 @@ public class InitiatorEventsController {
             @RequestParam(defaultValue = "0", required = false) int from,
             @RequestParam(defaultValue = "10", required = false) int size,
             HttpServletRequest request) {
-        String requestParams = request.getQueryString();
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL()
-                + (requestParams == null ? "" : "?" + requestParams));
+        Log.setRequestLog("user:", request);
         return ResponseEntity.ok().body(eventService.getEvents(userId, from, size));
     }
 
@@ -55,7 +52,7 @@ public class InitiatorEventsController {
             @PathVariable Long userId,
             @PathVariable Long eventId,
             HttpServletRequest request) {
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("user:", request);
         return ResponseEntity.ok().body(eventService.getEvent(userId, eventId));
     }
 
@@ -64,7 +61,7 @@ public class InitiatorEventsController {
             @PathVariable Long userId,
             @PathVariable Long eventId,
             HttpServletRequest request) {
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("user:", request);
         return ResponseEntity.ok().body(requestService.getRequestsByEventInitiator(userId, eventId));
     }
 
@@ -74,7 +71,7 @@ public class InitiatorEventsController {
             @PathVariable Long eventId,
             @Valid @RequestBody UpdateEventUserRequest updateEvent,
             HttpServletRequest request) {
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("user:", request);
         return ResponseEntity.ok().body(eventService.updateEvent(userId, eventId, updateEvent));
     }
 
@@ -84,7 +81,7 @@ public class InitiatorEventsController {
             @PathVariable long eventId,
             @RequestBody EventRequestStatusUpdateRequest statusUpdateRequest,
             HttpServletRequest request) {
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("user:", request);
         return ResponseEntity.ok().body(requestService.updateRequestsByEventInitiator(userId, eventId,
                 statusUpdateRequest));
     }
@@ -94,7 +91,7 @@ public class InitiatorEventsController {
             @PathVariable Long userId,
             @PathVariable Long eventId,
             HttpServletRequest request) {
-        log.info("initiator: " + "(" + request.getMethod() + ")" + request.getRequestURL());
+        Log.setRequestLog("user:", request);
         ResponseFormat response = eventService.deleteEvent(userId, eventId);
         return ResponseEntity.noContent().header("X-Deleted-Event-Info", response.getMessage()).build();
     }

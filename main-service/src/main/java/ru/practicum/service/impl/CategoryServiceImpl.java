@@ -26,7 +26,6 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository repository;
 
     @Override
-    @Transactional
     public CategoryDto createCategory(NewCategoryDto newCategoryDto) {
         Category category = CategoryMapper.INSTANCE.mapToNewCategory(newCategoryDto);
 
@@ -54,7 +53,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Transactional
     public CategoryDto updateCategory(long categoryId, NewCategoryDto newCategoryDto) {
         Category updatedCategory = repository.findById(categoryId)
                 .orElseThrow(() -> new NotFoundException("Category with ID: " + categoryId + " doesn't exist"));
@@ -69,7 +67,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Transactional
     public ResponseFormat deleteCategory(long categoryId) {
         if (repository.existsById(categoryId)) {
             repository.deleteById(categoryId);

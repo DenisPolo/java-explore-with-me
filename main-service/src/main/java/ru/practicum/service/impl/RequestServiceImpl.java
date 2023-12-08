@@ -35,7 +35,6 @@ public class RequestServiceImpl implements RequestService {
     private final EventRepository eventRepository;
 
     @Override
-    @Transactional
     public ParticipationRequestDto createRequest(long requesterId, long eventId) {
         User requester = userRepository.findById(requesterId).orElseThrow(() -> {
             throw new NotFoundException("User with id: " + requesterId + " doesn't exist");
@@ -114,7 +113,6 @@ public class RequestServiceImpl implements RequestService {
     }
 
     @Override
-    @Transactional
     public EventRequestStatusUpdateResult updateRequestsByEventInitiator(
             long initiatorId, long eventId,
             EventRequestStatusUpdateRequest updateRequest) {
@@ -193,7 +191,6 @@ public class RequestServiceImpl implements RequestService {
     }
 
     @Override
-    @Transactional
     public ParticipationRequestDto cancelRequestByEventsParticipant(long requesterId, long requestId) {
         if (!userRepository.existsById(requesterId)) {
             throw new NotFoundException("User with id: " + requesterId + " doesn't exist");
