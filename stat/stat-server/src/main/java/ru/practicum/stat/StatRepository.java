@@ -41,4 +41,13 @@ public interface StatRepository extends JpaRepository<Stat, Integer> {
             "GROUP BY s.app, s.uri " +
             "ORDER BY COUNT(s.uri) DESC")
     List<StatDto> findStats(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT new ru.practicum.statDto.StatDto(s.app, s.uri, COUNT(s.uri)) " +
+            "FROM Stat AS s " +
+            "WHERE s.app = ?1 " +
+            "AND s.uri = ?2 " +
+            "AND s.ip = ?3 " +
+            "GROUP BY s.app, s.uri " +
+            "ORDER BY COUNT(s.uri) DESC")
+    List<StatDto> findByIp(String app, String uri, String ip);
 }

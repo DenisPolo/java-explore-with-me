@@ -1,11 +1,18 @@
 package ru.practicum;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 import ru.practicum.statDto.StatDto;
 import ru.practicum.statDto.StatHitDto;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -14,16 +21,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@Service
 public class EWMStatClient {
-    private final RestTemplate rest = new RestTemplate();
-    private final String path = "http://localhost:9090";
+    private final RestTemplate rest;
+
+    @Autowired
+    public EWMStatClient(@Value("${stat-server.url}") String serverUrl, RestTemplateBuilder builder) {
+        rest = builder
+                .uriTemplateHandler(new DefaultUriBuilderFactory(serverUrl))
+                .requestFactory(HttpComponentsClientHttpRequestFactory::new)
+                .build();
+    }
 
     public boolean postHit(StatHitDto statHitDto) {
         HttpEntity<Object> requestEntity = new HttpEntity<>(statHitDto);
 
-        StatHitDto response = rest.postForObject(URI.create(path + "/hit"), requestEntity, StatHitDto.class);
-
-        System.out.println(response);
+        StatHitDto response = rest.exchange("/hit", HttpMethod.POST, requestEntity, StatHitDto.class).getBody();
 
         return (Objects.requireNonNull(response).getId() != null && response.getUri().equals(statHitDto.getUri()));
     }
@@ -44,6 +57,15 @@ public class EWMStatClient {
         return getResponse(start, end, null, null);
     }
 
+    public boolean checkUniqueIp(StatHitDto statHitDto) {
+        String path = "/checkUniqueIp?app=" + statHitDto.getApp()
+                + "&uri=" + statHitDto.getUri() + "&ip=" + statHitDto.getIp();
+
+        ResponseEntity<Boolean> response = rest.exchange(path, HttpMethod.GET, null, Boolean.class);
+
+        return Boolean.TRUE.equals(response.getBody());
+    }
+
     private List<StatDto> getResponse(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
         String startTime;
         String endTime;
@@ -62,13 +84,14 @@ public class EWMStatClient {
                 "end", endTime
         ));
 
-        StatDto[] statDtos = rest.getForObject(makePath(path, uris, unique), StatDto[].class, parameters);
+        StatDto[] statDtos = rest.exchange(makePath(uris, unique), HttpMethod.GET, null, StatDto[].class,
+                parameters).getBody();
 
         return Arrays.asList(Objects.requireNonNull(statDtos));
     }
 
-    private String makePath(String path, List<String> uris, Boolean unique) {
-        StringBuilder requestPath = new StringBuilder(path);
+    private String makePath(List<String> uris, Boolean unique) {
+        StringBuilder requestPath = new StringBuilder();
 
         requestPath.append("/stats?start={start}&end={end}");
 

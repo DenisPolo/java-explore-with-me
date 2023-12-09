@@ -10,4 +10,6 @@ public interface StatService {
     StatHitDto postHit(StatHitDto statHitDto);
 
     List<StatDto> getStat(QueryParams params);
+
+    Boolean getIsUniqueIp(StatHitDto statHitDto);
 }
