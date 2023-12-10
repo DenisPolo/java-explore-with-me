@@ -11,6 +11,8 @@ import java.util.List;
 @AllArgsConstructor
 public class QueryPublicParams {
     private String text;
+    private List<Long> mainLocations;
+    private Coordinates coordinates;
     private List<Long> categories;
     private Boolean paid;
     private LocalDateTime rangeStart;

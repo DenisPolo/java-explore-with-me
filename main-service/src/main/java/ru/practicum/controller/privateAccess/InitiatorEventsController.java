@@ -56,6 +56,28 @@ public class InitiatorEventsController {
         return ResponseEntity.ok().body(eventService.getEvent(userId, eventId));
     }
 
+    @GetMapping("/location/{locationId}")
+    public ResponseEntity<List<EventShortDto>> getEventsInLocation(
+            @PathVariable Long locationId,
+            @RequestParam(defaultValue = "0", required = false) int from,
+            @RequestParam(defaultValue = "10", required = false) int size,
+            HttpServletRequest request) {
+        Log.setRequestLog("user:", request);
+        return ResponseEntity.ok().body(eventService.getEventsInLocation(locationId, from, size));
+    }
+
+    @GetMapping("/location")
+    public ResponseEntity<List<EventShortDto>> getEventsInCoordinates(
+            @RequestParam Float lat,
+            @RequestParam Float lon,
+            @RequestParam Float rad,
+            @RequestParam(defaultValue = "0", required = false) int from,
+            @RequestParam(defaultValue = "10", required = false) int size,
+            HttpServletRequest request) {
+        Log.setRequestLog("user:", request);
+        return ResponseEntity.ok().body(eventService.getEventsInCoordinates(lat, lon, rad, from, size));
+    }
+
     @GetMapping("/{eventId}/requests")
     public ResponseEntity<List<ParticipationRequestDto>> getRequests(
             @PathVariable Long userId,

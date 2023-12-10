@@ -3,10 +3,19 @@ package ru.practicum.dto.location;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
 @Getter
 @AllArgsConstructor
 public class LocationDto {
+
+    @Min(value = -90, message = "Location latitude must not be less than -90°")
+    @Max(value = 90, message = "Location latitude must not be greater than 90°")
     private Float lat;
+
+    @Min(value = -180, message = "Location latitude must not be less than -180°")
+    @Max(value = 180, message = "Location latitude must not be greater than 180°")
     private Float lon;
 
     @Override

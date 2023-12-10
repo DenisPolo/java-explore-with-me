@@ -1,5 +1,6 @@
 package ru.practicum.service;
 
+import ru.practicum.constant.EventState;
 import ru.practicum.controller.queryParams.QueryAdminParams;
 import ru.practicum.controller.queryParams.QueryPublicParams;
 import ru.practicum.dto.event.*;
@@ -12,9 +13,17 @@ public interface EventService {
 
     List<EventShortDto> getEvents(Long userId, int from, int size);
 
-    List<EventFullDto> getEvents(QueryAdminParams params, int from, int size);
+    List<EventFullDto> getEventsFilterAdmin(QueryAdminParams params, int from, int size);
 
-    List<EventShortDto> getEvents(QueryPublicParams params, int from, int size);
+    List<EventShortDto> getEventsFilter(QueryPublicParams params, int from, int size);
+
+    List<EventFullDto> getEventsInLocationByAdmin(Long locationId, List<EventState> states, int from, int size);
+
+    List<EventFullDto> getEventsInCoordinatesByAdmin(Float lat, Float lon, Float rad, List<EventState> states, int from, int size);
+
+    List<EventShortDto> getEventsInLocation(Long locationId, int from, int size);
+
+    List<EventShortDto> getEventsInCoordinates(Float lat, Float lon, Float rad, int from, int size);
 
     EventFullDto getEvent(Long userId, Long eventId);
 
