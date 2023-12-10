@@ -11,6 +11,8 @@ import java.util.List;
 @AllArgsConstructor
 public class QueryAdminParams {
     private List<Long> users;
+    private List<Long> mainLocations;
+    private Coordinates coordinates;
     private List<EventState> states;
     private List<Long> categories;
     private LocalDateTime rangeStart;

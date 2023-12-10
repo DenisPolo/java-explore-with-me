@@ -14,6 +14,7 @@ import ru.practicum.constant.Constants;
 import ru.practicum.constant.EventState;
 import ru.practicum.constant.Sort;
 import ru.practicum.constant.StateAction;
+import ru.practicum.controller.queryParams.Coordinates;
 import ru.practicum.controller.queryParams.QueryAdminParams;
 import ru.practicum.controller.queryParams.QueryPublicParams;
 import ru.practicum.dto.event.*;
@@ -23,14 +24,8 @@ import ru.practicum.exception.ForbiddenException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.mapper.EventMapper;
 import ru.practicum.mapper.LocationMapper;
-import ru.practicum.model.Category;
-import ru.practicum.model.Event;
-import ru.practicum.model.Location;
-import ru.practicum.model.User;
-import ru.practicum.repository.CategoryRepository;
-import ru.practicum.repository.EventRepository;
-import ru.practicum.repository.LocationRepository;
-import ru.practicum.repository.UserRepository;
+import ru.practicum.model.*;
+import ru.practicum.repository.*;
 import ru.practicum.responseFormat.ResponseFormat;
 import ru.practicum.service.EventService;
 
@@ -50,6 +45,7 @@ public class EventServiceImpl implements EventService {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final MainLocationRepository mainLocationRepository;
     private final SessionFactory sessionFactory;
 
     @Override
@@ -91,7 +87,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventFullDto> getEvents(QueryAdminParams params, int from, int size) {
+    public List<EventFullDto> getEventsFilterAdmin(QueryAdminParams params, int from, int size) {
         Session session = sessionFactory.openSession();
         CriteriaBuilder cb = session.getCriteriaBuilder();
         CriteriaQuery<Event> cq = cb.createQuery(Event.class);
@@ -106,6 +102,8 @@ public class EventServiceImpl implements EventService {
             predicates.add(cb.and(event.get("initiator").in(params.getUsers())));
         }
 
+        setLocationsPredicates(cb, event, predicates, params.getMainLocations(), params.getCoordinates());
+
         if (params.getStates() != null) {
             predicates.add(cb.and(event.get("state").in(params.getStates())));
         }
@@ -115,6 +113,10 @@ public class EventServiceImpl implements EventService {
         }
 
         if (params.getRangeStart() != null && params.getRangeEnd() != null) {
+            if (params.getRangeStart().isAfter(params.getRangeEnd())) {
+                throw new BadRequestException("RangeEnd is before RangeStart");
+            }
+
             predicates.add(cb.between(event.get("eventDate"), params.getRangeStart(), params.getRangeEnd()));
         } else if (params.getRangeStart() != null) {
             predicates.add(cb.greaterThan(event.get("eventDate"), params.getRangeStart()));
@@ -122,7 +124,7 @@ public class EventServiceImpl implements EventService {
             predicates.add(cb.lessThan(event.get("eventDate"), params.getRangeEnd()));
         }
 
-        cq.where(predicates.toArray(new Predicate[0]));
+        cq.where(predicates.toArray(new Predicate[0])).orderBy(cb.asc(event.get("id")));
 
         Query<Event> query = session.createQuery(cq);
         query.setFirstResult(Math.toIntExact(from));
@@ -135,7 +137,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRED, readOnly = true)
-    public List<EventShortDto> getEvents(QueryPublicParams params, int from, int size) {
+    public List<EventShortDto> getEventsFilter(QueryPublicParams params, int from, int size) {
         Session session = sessionFactory.openSession().getSession();
         CriteriaBuilder cb = session.getCriteriaBuilder();
         CriteriaQuery<Event> cq = cb.createQuery(Event.class);
@@ -152,6 +154,8 @@ public class EventServiceImpl implements EventService {
                     (cb.like(cb.lower(event.get("description")),
                             ("%" + params.getText() + "%").toLowerCase()))));
         }
+
+        setLocationsPredicates(cb, event, predicates, params.getMainLocations(), params.getCoordinates());
 
         if (params.getCategories() != null) {
             predicates.add(cb.and(event.get("category").in(params.getCategories())));
@@ -203,6 +207,36 @@ public class EventServiceImpl implements EventService {
         session.close();
 
         return EventMapper.INSTANCE.mapToEventShortDto(results);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventFullDto> getEventsInLocationByAdmin(Long mainLocationId, List<EventState> states,
+                                                         int from, int size) {
+        if (states == null) states = List.of(EventState.PENDING, EventState.PUBLISHED, EventState.CANCELED);
+        return EventMapper.INSTANCE.mapToEventFullDto(findEventsInLocation(mainLocationId, states, from, size));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventFullDto> getEventsInCoordinatesByAdmin(Float lat, Float lon, Float rad, List<EventState> states,
+                                                            int from, int size) {
+        if (states == null) states = List.of(EventState.PENDING, EventState.PUBLISHED, EventState.CANCELED);
+        return EventMapper.INSTANCE.mapToEventFullDto(findEventsInCoordinates(lat, lon, rad, states, from, size));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventShortDto> getEventsInLocation(Long mainLocationId, int from, int size) {
+        return EventMapper.INSTANCE.mapToEventShortDto(findEventsInLocation(mainLocationId,
+                List.of(EventState.PUBLISHED), from, size));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventShortDto> getEventsInCoordinates(Float lat, Float lon, Float rad, int from, int size) {
+        return EventMapper.INSTANCE.mapToEventShortDto(findEventsInCoordinates(lat, lon, rad,
+                List.of(EventState.PUBLISHED), from, size));
     }
 
     @Override
@@ -382,5 +416,86 @@ public class EventServiceImpl implements EventService {
         if (updateEvent.getRequestModeration() != null)
             updatableEvent.setRequestModeration(updateEvent.getRequestModeration());
         if (updateEvent.getTitle() != null) updatableEvent.setTitle(updateEvent.getTitle());
+    }
+
+    private List<Event> findEventsInLocation(Long mainLocationId, List<EventState> states, int from, int size) {
+        MainLocation mainLocation = mainLocationRepository.findById(mainLocationId)
+                .orElseThrow(() -> new NotFoundException("Main location with ID: " + mainLocationId
+                        + " doesn't exist"));
+
+        PageRequest page = PageRequest.of(from > 0 ? from / size : 0, size > 0 ? size : 10);
+
+        return eventRepository.findEventsInLocation(mainLocation
+                .getLat(), mainLocation.getLon(), mainLocation.getRad(), states, page);
+    }
+
+    private void setLocationsPredicates(
+            CriteriaBuilder cb, Root<Event> event, List<Predicate> predicates,
+            List<Long> mainLocationsIds, Coordinates coordinates) {
+        if (mainLocationsIds != null && coordinates != null) {
+            List<Predicate> locations = new ArrayList<>();
+            List<MainLocation> mainLocations = mainLocationRepository.findAllById(mainLocationsIds);
+
+            for (MainLocation mainLocation : mainLocations) {
+                locations.add(cb.lessThan(
+                        cb.function("distance", Float.class,
+                                event.get("location").get("lat"),
+                                event.get("location").get("lon"),
+                                cb.literal(mainLocation.getLat()),
+                                cb.literal(mainLocation.getLon())),
+                        cb.literal(mainLocation.getRad()))
+                );
+            }
+
+            locations.add(cb.lessThan(
+                    cb.function("distance", Float.class, event.get("location").get("lat"),
+                            event.get("location").get("lon"),
+                            cb.literal(coordinates.getLat()),
+                            cb.literal(coordinates.getLon())),
+                    cb.literal(coordinates.getRad()))
+            );
+
+            predicates.add(cb.or(locations.toArray(new Predicate[0])));
+        } else if (mainLocationsIds != null) {
+            List<Predicate> locations = new ArrayList<>();
+            List<MainLocation> mainLocations = mainLocationRepository.findAllById(mainLocationsIds);
+
+            for (MainLocation mainLocation : mainLocations) {
+                locations.add(cb.lessThan(
+                        cb.function("distance", Float.class,
+                                event.get("location").get("lat"),
+                                event.get("location").get("lon"),
+                                cb.literal(mainLocation.getLat()),
+                                cb.literal(mainLocation.getLon())),
+                        cb.literal(mainLocation.getRad()))
+                );
+            }
+
+            predicates.add(cb.or(locations.toArray(new Predicate[0])));
+        } else if (coordinates != null) {
+            predicates.add(cb.lessThan(
+                    cb.function("distance", Float.class, event.get("location").get("lat"),
+                            event.get("location").get("lon"),
+                            cb.literal(coordinates.getLat()),
+                            cb.literal(coordinates.getLon())),
+                    cb.literal(coordinates.getRad()))
+            );
+        }
+    }
+
+    private List<Event> findEventsInCoordinates(Float lat, Float lon, Float rad, List<EventState> states,
+                                                int from, int size) {
+        if (lat < -90 || lat > 90) {
+            throw new BadRequestException("Latitude range must be in range from -90 to 90 (provided: " + lat + ")");
+        } else if (lon < -180 || lon > 180) {
+            throw new BadRequestException("Longitude range must be in range from -180 to 180 (provided: " + lon + ")");
+        } else if (rad < 0 || rad > 100000) {
+            throw new BadRequestException("Radius must be not greater than 100000 or less than 0 meters (provided: "
+                    + rad + ")");
+        }
+
+        PageRequest page = PageRequest.of(from > 0 ? from / size : 0, size > 0 ? size : 10);
+
+        return eventRepository.findEventsInLocation(lat, lon, rad, states, page);
     }
 }
