@@ -448,8 +448,10 @@ public class EventServiceImpl implements EventService {
             }
 
             locations.add(cb.lessThan(
-                    cb.function("distance", Float.class, event.get("location").get("lat"), event.get("location").get("lon"),
-                            cb.literal(coordinates.getLat()), cb.literal(coordinates.getLon())),
+                    cb.function("distance", Float.class, event.get("location").get("lat"),
+                            event.get("location").get("lon"),
+                            cb.literal(coordinates.getLat()),
+                            cb.literal(coordinates.getLon())),
                     cb.literal(coordinates.getRad()))
             );
 
@@ -472,14 +474,17 @@ public class EventServiceImpl implements EventService {
             predicates.add(cb.or(locations.toArray(new Predicate[0])));
         } else if (coordinates != null) {
             predicates.add(cb.lessThan(
-                    cb.function("distance", Float.class, event.get("location").get("lat"), event.get("location").get("lon"),
-                            cb.literal(coordinates.getLat()), cb.literal(coordinates.getLon())),
+                    cb.function("distance", Float.class, event.get("location").get("lat"),
+                            event.get("location").get("lon"),
+                            cb.literal(coordinates.getLat()),
+                            cb.literal(coordinates.getLon())),
                     cb.literal(coordinates.getRad()))
             );
         }
     }
 
-    private List<Event> findEventsInCoordinates(Float lat, Float lon, Float rad, List<EventState> states, int from, int size) {
+    private List<Event> findEventsInCoordinates(Float lat, Float lon, Float rad, List<EventState> states,
+                                                int from, int size) {
         if (lat < -90 || lat > 90) {
             throw new BadRequestException("Latitude range must be in range from -90 to 90 (provided: " + lat + ")");
         } else if (lon < -180 || lon > 180) {
